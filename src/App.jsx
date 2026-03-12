@@ -1,148 +1,146 @@
 import { useState, useEffect } from "react";
 
-const TMDB_KEY = "";
-
 const ADMIN_EMAIL = "admin@mybrary.com";
 const ADMIN_PASSWORD = "1234";
 
-export default function App(){
+export default function App() {
 
-const [user,setUser] = useState(null);
-const [page,setPage] = useState("login");
+const [user,setUser] = useState(null)
+const [page,setPage] = useState("login")
 
-const [email,setEmail] = useState("");
-const [password,setPassword] = useState("");
+const [email,setEmail] = useState("")
+const [password,setPassword] = useState("")
 
-const [query,setQuery] = useState("");
-const [books,setBooks] = useState([]);
-const [movies,setMovies] = useState([]);
+const [query,setQuery] = useState("")
+const [books,setBooks] = useState([])
 
-const [library,setLibrary] = useState([]);
+const [library,setLibrary] = useState([])
 
 useEffect(()=>{
 
-const savedUser = localStorage.getItem("user");
-
+const savedUser = localStorage.getItem("user")
 if(savedUser){
-setUser(JSON.parse(savedUser));
-setPage("home");
+setUser(JSON.parse(savedUser))
+setPage("home")
 }
 
-const savedLibrary = localStorage.getItem("library");
-
+const savedLibrary = localStorage.getItem("library")
 if(savedLibrary){
-setLibrary(JSON.parse(savedLibrary));
+setLibrary(JSON.parse(savedLibrary))
 }
 
-},[]);
+},[])
 
-const saveLibrary = (data)=>{
-setLibrary(data);
-localStorage.setItem("library",JSON.stringify(data));
-};
+const saveLibrary=(data)=>{
+setLibrary(data)
+localStorage.setItem("library",JSON.stringify(data))
+}
 
-const signup = ()=>{
+const signup=()=>{
 
-const users = JSON.parse(localStorage.getItem("users") || "[]");
+const users = JSON.parse(localStorage.getItem("users") || "[]")
 
-users.push({email,password});
+users.push({email,password})
 
-localStorage.setItem("users",JSON.stringify(users));
+localStorage.setItem("users",JSON.stringify(users))
 
-alert("회원가입 완료");
+alert("회원가입 완료")
 
-setPage("login");
+setPage("login")
 
-};
+}
 
-const login = ()=>{
+const login=()=>{
 
 if(email===ADMIN_EMAIL && password===ADMIN_PASSWORD){
 
-const adminUser = {email,role:"admin"};
+const adminUser={email,role:"admin"}
 
-setUser(adminUser);
+setUser(adminUser)
 
-localStorage.setItem("user",JSON.stringify(adminUser));
+localStorage.setItem("user",JSON.stringify(adminUser))
 
-setPage("home");
+setPage("home")
 
-return;
+return
 }
 
-const users = JSON.parse(localStorage.getItem("users") || "[]");
+const users = JSON.parse(localStorage.getItem("users") || "[]")
 
-const found = users.find(u=>u.email===email && u.password===password);
+const found = users.find(u=>u.email===email && u.password===password)
 
 if(found){
 
-setUser(found);
+setUser(found)
 
-localStorage.setItem("user",JSON.stringify(found));
+localStorage.setItem("user",JSON.stringify(found))
 
-setPage("home");
+setPage("home")
 
 }else{
 
-alert("로그인 실패");
+alert("로그인 실패")
 
 }
 
-};
+}
 
-const logout = ()=>{
+const logout=()=>{
 
-setUser(null);
+setUser(null)
 
-localStorage.removeItem("user");
+localStorage.removeItem("user")
 
-setPage("login");
+setPage("login")
 
-};
+}
 
-const search = async ()=>{
+const search=async()=>{
 
-if(!query) return;
+if(!query) return
 
 const res = await fetch(
 `https://www.googleapis.com/books/v1/volumes?q=${query}`
-);
+)
 
-const data = await res.json();
+const data = await res.json()
 
-setBooks(data.items || []);
-
-if(TMDB_KEY){
-
-const movieRes = await fetch(
-`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${query}`
-);
-
-const movieData = await movieRes.json();
-
-setMovies(movieData.results || []);
+setBooks(data.items || [])
 
 }
 
-};
+const addBook=(book)=>{
 
-const addLibrary = (item)=>{
+const info = book.volumeInfo
 
-if(library.find(i=>i.id===item.id)) return;
+const poster = info.imageLinks?.thumbnail || ""
 
-const newLibrary = [...library,item];
+const newItem = {
+id:book.id,
+title:info.title,
+poster
+}
 
-saveLibrary(newLibrary);
+if(library.find(i=>i.id===book.id)){
+alert("이미 추가됨")
+return
+}
 
-};
+const newLibrary=[...library,newItem]
 
-const removeItem = (id)=>{
+saveLibrary(newLibrary)
 
-const newLibrary = library.filter(i=>i.id!==id);
+alert("내 서재에 추가됨")
 
-saveLibrary(newLibrary);
+}
 
-};
+const removeBook=(id)=>{
+
+const newLibrary = library.filter(i=>i.id!==id)
+
+saveLibrary(newLibrary)
+
+}
 
 if(page==="login"){
 
@@ -173,7 +171,7 @@ onChange={(e)=>setPassword(e.target.value)}
 
 </div>
 
-);
+)
 
 }
 
@@ -206,76 +204,19 @@ onChange={(e)=>setPassword(e.target.value)}
 
 </div>
 
-);
+)
 
 }
+
+if(page==="library"){
 
 return(
 
 <div style={styles.page}>
 
-<h1>📚 MYBRARY</h1>
+<h1>📚 내 서재</h1>
 
-<p>{user.email}</p>
-
-<button onClick={logout}>로그아웃</button>
-
-{user.email===ADMIN_EMAIL && (
-<button onClick={()=>setPage("admin")}>
-관리자
-</button>
-)}
-
-<div>
-
-<input
-placeholder="검색"
-value={query}
-onChange={(e)=>setQuery(e.target.value)}
-/>
-
-<button onClick={search}>검색</button>
-
-</div>
-
-<h2>책</h2>
-
-<div style={styles.grid}>
-
-{books.map(book=>{
-
-const info = book.volumeInfo;
-
-const poster = info.imageLinks?.thumbnail ||
-"https://via.placeholder.com/200";
-
-return(
-
-<div key={book.id} style={styles.card}>
-
-<img src={poster}/>
-
-<p>{info.title}</p>
-
-<button
-onClick={()=>addLibrary({
-id:book.id,
-title:info.title,
-poster
-})}
->
-추가
-</button>
-
-</div>
-
-);
-
-})}
-
-</div>
-
-<h2>내 서재</h2>
+<button onClick={()=>setPage("home")}>홈</button>
 
 <div style={styles.grid}>
 
@@ -283,11 +224,11 @@ poster
 
 <div key={item.id} style={styles.card}>
 
-<img src={item.poster}/>
+<img src={item.poster} width="100"/>
 
 <p>{item.title}</p>
 
-<button onClick={()=>removeItem(item.id)}>
+<button onClick={()=>removeBook(item.id)}>
 삭제
 </button>
 
@@ -299,7 +240,71 @@ poster
 
 </div>
 
-);
+)
+
+}
+
+return(
+
+<div style={styles.page}>
+
+<h1>📚 MYBRARY</h1>
+
+<p>{user.email}</p>
+
+<button onClick={()=>setPage("library")}>
+내 서재
+</button>
+
+<button onClick={logout}>
+로그아웃
+</button>
+
+<div style={{marginTop:20}}>
+
+<input
+placeholder="책 검색"
+value={query}
+onChange={(e)=>setQuery(e.target.value)}
+/>
+
+<button onClick={search}>검색</button>
+
+</div>
+
+<h2>검색 결과</h2>
+
+<div style={styles.grid}>
+
+{books.map(book=>{
+
+const info = book.volumeInfo
+
+const poster = info.imageLinks?.thumbnail || ""
+
+return(
+
+<div key={book.id} style={styles.card}>
+
+<img src={poster} width="100"/>
+
+<p>{info.title}</p>
+
+<button onClick={()=>addBook(book)}>
+추가
+</button>
+
+</div>
+
+)
+
+})}
+
+</div>
+
+</div>
+
+)
 
 }
 
@@ -320,8 +325,9 @@ margin:"100px auto"
 
 grid:{
 display:"grid",
-gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",
-gap:20
+gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",
+gap:20,
+marginTop:20
 },
 
 card:{
@@ -329,4 +335,4 @@ border:"1px solid #ddd",
 padding:10
 }
 
-};
+}
