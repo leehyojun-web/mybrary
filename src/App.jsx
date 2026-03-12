@@ -1,379 +1,332 @@
-import { useState, useEffect } from "react"
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom"
+import { useState, useEffect } from "react";
 
-/* ---------------- STORAGE ---------------- */
+const TMDB_KEY = "";
 
-const load = (k, f) => {
-  try {
-    const v = localStorage.getItem(k)
-    return v ? JSON.parse(v) : f
-  } catch {
-    return f
-  }
+const ADMIN_EMAIL = "admin@mybrary.com";
+const ADMIN_PASSWORD = "1234";
+
+export default function App(){
+
+const [user,setUser] = useState(null);
+const [page,setPage] = useState("login");
+
+const [email,setEmail] = useState("");
+const [password,setPassword] = useState("");
+
+const [query,setQuery] = useState("");
+const [books,setBooks] = useState([]);
+const [movies,setMovies] = useState([]);
+
+const [library,setLibrary] = useState([]);
+
+useEffect(()=>{
+
+const savedUser = localStorage.getItem("user");
+
+if(savedUser){
+setUser(JSON.parse(savedUser));
+setPage("home");
 }
 
-const save = (k, v) => localStorage.setItem(k, JSON.stringify(v))
+const savedLibrary = localStorage.getItem("library");
 
-/* ---------------- STYLES ---------------- */
+if(savedLibrary){
+setLibrary(JSON.parse(savedLibrary));
+}
 
-const styles = {
+},[]);
 
-  page: {
-    minHeight: "100vh",
-    background: "linear-gradient(180deg,#0c0a04,#181008)",
-    color: "white",
-    fontFamily: "system-ui",
-    padding: 30
-  },
+const saveLibrary = (data)=>{
+setLibrary(data);
+localStorage.setItem("library",JSON.stringify(data));
+};
 
-  center: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 10
-  },
+const signup = ()=>{
 
-  input: {
-    padding: 10,
-    borderRadius: 6,
-    border: "1px solid #555",
-    background: "#111",
-    color: "white"
-  },
+const users = JSON.parse(localStorage.getItem("users") || "[]");
 
-  button: {
-    padding: "10px 14px",
-    borderRadius: 6,
-    border: "none",
-    background: "#c4a45a",
-    cursor: "pointer",
-    fontWeight: "bold"
-  },
+users.push({email,password});
 
-  card: {
-    background: "#1b150a",
-    border: "1px solid #3a2a10",
-    padding: 16,
-    borderRadius: 10,
-    marginBottom: 12,
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center"
-  },
+localStorage.setItem("users",JSON.stringify(users));
 
-  tag: {
-    fontSize: 12,
-    padding: "2px 8px",
-    borderRadius: 12,
-    background: "#3a2a10"
-  }
+alert("회원가입 완료");
+
+setPage("login");
+
+};
+
+const login = ()=>{
+
+if(email===ADMIN_EMAIL && password===ADMIN_PASSWORD){
+
+const adminUser = {email,role:"admin"};
+
+setUser(adminUser);
+
+localStorage.setItem("user",JSON.stringify(adminUser));
+
+setPage("home");
+
+return;
+}
+
+const users = JSON.parse(localStorage.getItem("users") || "[]");
+
+const found = users.find(u=>u.email===email && u.password===password);
+
+if(found){
+
+setUser(found);
+
+localStorage.setItem("user",JSON.stringify(found));
+
+setPage("home");
+
+}else{
+
+alert("로그인 실패");
 
 }
 
-/* ---------------- LOGIN ---------------- */
+};
 
-function Login({ onLogin }) {
+const logout = ()=>{
 
-  const [mode, setMode] = useState("login")
-  const [form, setForm] = useState({ id: "", pw: "", name: "" })
+setUser(null);
 
-  const auth = () => {
+localStorage.removeItem("user");
 
-    const users = load("myb_users", [])
+setPage("login");
 
-    if (mode === "signup") {
+};
 
-      if (users.find(u => u.id === form.id)) {
-        alert("이미 존재하는 ID")
-        return
-      }
+const search = async ()=>{
 
-      users.push(form)
-      save("myb_users", users)
+if(!query) return;
 
-      alert("회원가입 완료")
-      setMode("login")
-      return
-    }
+const res = await fetch(
+`https://www.googleapis.com/books/v1/volumes?q=${query}`
+);
 
-    const user = users.find(
-      u => u.id === form.id && u.pw === form.pw
-    )
+const data = await res.json();
 
-    if (user) {
-      save("myb_current", user)
-      onLogin(user)
-    } else {
-      alert("로그인 실패")
-    }
+setBooks(data.items || []);
 
-  }
+if(TMDB_KEY){
 
-  return (
+const movieRes = await fetch(
+`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${query}`
+);
 
-    <div style={{ ...styles.page, ...styles.center, justifyContent: "center" }}>
+const movieData = await movieRes.json();
 
-      <h1 style={{ fontSize: 42 }}>MYBRARY</h1>
+setMovies(movieData.results || []);
 
-      <input
-        style={styles.input}
-        placeholder="ID"
-        onChange={e => setForm({ ...form, id: e.target.value })}
-      />
-
-      <input
-        style={styles.input}
-        type="password"
-        placeholder="Password"
-        onChange={e => setForm({ ...form, pw: e.target.value })}
-      />
-
-      {mode === "signup" &&
-        <input
-          style={styles.input}
-          placeholder="Name"
-          onChange={e => setForm({ ...form, name: e.target.value })}
-        />
-      }
-
-      <button style={styles.button} onClick={auth}>
-        {mode === "login" ? "로그인" : "회원가입"}
-      </button>
-
-      <p
-        onClick={() => setMode(mode === "login" ? "signup" : "login")}
-        style={{ cursor: "pointer", opacity: .7 }}
-      >
-        {mode === "login" ? "회원가입" : "로그인"}
-      </p>
-
-    </div>
-  )
 }
 
-/* ---------------- HALL ---------------- */
+};
 
-function Hall({ user }) {
+const addLibrary = (item)=>{
 
-  return (
+if(library.find(i=>i.id===item.id)) return;
 
-    <div style={{ ...styles.page, ...styles.center, justifyContent: "center" }}>
+const newLibrary = [...library,item];
 
-      <h1 style={{ fontSize: 50 }}>MYBRARY</h1>
+saveLibrary(newLibrary);
 
-      <p style={{ opacity: .7 }}>{user.name}님의 문화 기록</p>
+};
 
-      <Link to="/library">
-        <button style={styles.button}>
-          서재 들어가기
-        </button>
-      </Link>
+const removeItem = (id)=>{
 
-    </div>
+const newLibrary = library.filter(i=>i.id!==id);
 
-  )
+saveLibrary(newLibrary);
+
+};
+
+if(page==="login"){
+
+return(
+
+<div style={styles.center}>
+
+<h1>MYBRARY 로그인</h1>
+
+<input
+placeholder="email"
+value={email}
+onChange={(e)=>setEmail(e.target.value)}
+/>
+
+<input
+type="password"
+placeholder="password"
+value={password}
+onChange={(e)=>setPassword(e.target.value)}
+/>
+
+<button onClick={login}>로그인</button>
+
+<p onClick={()=>setPage("signup")} style={{cursor:"pointer"}}>
+회원가입
+</p>
+
+</div>
+
+);
+
 }
 
-/* ---------------- LIBRARY ---------------- */
+if(page==="signup"){
 
-function Library({ user }) {
+return(
 
-  const [records, setRecords] = useState([])
-  const [title, setTitle] = useState("")
-  const [type, setType] = useState("book")
-  const [stars, setStars] = useState(5)
-  const [search, setSearch] = useState("")
+<div style={styles.center}>
 
-  useEffect(() => {
+<h1>회원가입</h1>
 
-    const data = load(`records_${user.id}`, [])
-    setRecords(data)
+<input
+placeholder="email"
+value={email}
+onChange={(e)=>setEmail(e.target.value)}
+/>
 
-  }, [])
+<input
+type="password"
+placeholder="password"
+value={password}
+onChange={(e)=>setPassword(e.target.value)}
+/>
 
-  const saveRecords = (list) => {
-    setRecords(list)
-    save(`records_${user.id}`, list)
-  }
+<button onClick={signup}>가입</button>
 
-  const add = () => {
+<p onClick={()=>setPage("login")} style={{cursor:"pointer"}}>
+로그인
+</p>
 
-    if (!title.trim()) return
+</div>
 
-    const rec = {
-      id: Date.now(),
-      title,
-      type,
-      stars,
-      date: new Date().toLocaleDateString()
-    }
+);
 
-    saveRecords([rec, ...records])
-
-    setTitle("")
-  }
-
-  const del = id => {
-
-    saveRecords(records.filter(r => r.id !== id))
-
-  }
-
-  const filtered = records.filter(r =>
-    r.title.toLowerCase().includes(search.toLowerCase())
-  )
-
-  const icons = {
-    book: "📚",
-    movie: "🎬",
-    drama: "📺",
-    game: "🎮"
-  }
-
-  return (
-
-    <div style={styles.page}>
-
-      <Link to="/">
-        <button style={{ ...styles.button, marginBottom: 20 }}>
-          ← 돌아가기
-        </button>
-      </Link>
-
-      <h2>나의 문화 기록</h2>
-
-      {/* 입력 */}
-
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
-
-        <input
-          style={styles.input}
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          placeholder="제목"
-        />
-
-        <select
-          style={styles.input}
-          value={type}
-          onChange={e => setType(e.target.value)}
-        >
-          <option value="book">📚 책</option>
-          <option value="movie">🎬 영화</option>
-          <option value="drama">📺 드라마</option>
-          <option value="game">🎮 게임</option>
-        </select>
-
-        <select
-          style={styles.input}
-          value={stars}
-          onChange={e => setStars(e.target.value)}
-        >
-          <option value="5">⭐⭐⭐⭐⭐</option>
-          <option value="4">⭐⭐⭐⭐</option>
-          <option value="3">⭐⭐⭐</option>
-          <option value="2">⭐⭐</option>
-          <option value="1">⭐</option>
-        </select>
-
-        <button style={styles.button} onClick={add}>
-          추가
-        </button>
-
-      </div>
-
-      {/* 검색 */}
-
-      <input
-        style={{ ...styles.input, marginBottom: 20 }}
-        placeholder="검색"
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-      />
-
-      {/* 목록 */}
-
-      {filtered.map(r => (
-
-        <div key={r.id} style={styles.card}>
-
-          <div>
-
-            <div style={{ fontSize: 18 }}>
-              {icons[r.type]} {r.title}
-            </div>
-
-            <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-
-              <span style={styles.tag}>
-                {"⭐".repeat(r.stars)}
-              </span>
-
-              <span style={styles.tag}>
-                {r.date}
-              </span>
-
-            </div>
-
-          </div>
-
-          <button
-            onClick={() => del(r.id)}
-            style={{
-              background: "#8b1a1a",
-              color: "white",
-              border: "none",
-              padding: "6px 10px",
-              borderRadius: 6,
-              cursor: "pointer"
-            }}
-          >
-            삭제
-          </button>
-
-        </div>
-
-      ))}
-
-    </div>
-  )
 }
 
-/* ---------------- APP ---------------- */
+return(
 
-export default function App() {
+<div style={styles.page}>
 
-  const [user, setUser] = useState(null)
+<h1>📚 MYBRARY</h1>
 
-  useEffect(() => {
+<p>{user.email}</p>
 
-    const u = load("myb_current", null)
+<button onClick={logout}>로그아웃</button>
 
-    if (u) setUser(u)
+{user.email===ADMIN_EMAIL && (
+<button onClick={()=>setPage("admin")}>
+관리자
+</button>
+)}
 
-  }, [])
+<div>
 
-  if (!user) return <Login onLogin={setUser} />
+<input
+placeholder="검색"
+value={query}
+onChange={(e)=>setQuery(e.target.value)}
+/>
 
-  return (
+<button onClick={search}>검색</button>
 
-    <BrowserRouter>
+</div>
 
-      <Routes>
+<h2>책</h2>
 
-        <Route
-          path="/"
-          element={<Hall user={user} />}
-        />
+<div style={styles.grid}>
 
-        <Route
-          path="/library"
-          element={<Library user={user} />}
-        />
+{books.map(book=>{
 
-      </Routes>
+const info = book.volumeInfo;
 
-    </BrowserRouter>
+const poster = info.imageLinks?.thumbnail ||
+"https://via.placeholder.com/200";
 
-  )
+return(
+
+<div key={book.id} style={styles.card}>
+
+<img src={poster}/>
+
+<p>{info.title}</p>
+
+<button
+onClick={()=>addLibrary({
+id:book.id,
+title:info.title,
+poster
+})}
+>
+추가
+</button>
+
+</div>
+
+);
+
+})}
+
+</div>
+
+<h2>내 서재</h2>
+
+<div style={styles.grid}>
+
+{library.map(item=>(
+
+<div key={item.id} style={styles.card}>
+
+<img src={item.poster}/>
+
+<p>{item.title}</p>
+
+<button onClick={()=>removeItem(item.id)}>
+삭제
+</button>
+
+</div>
+
+))}
+
+</div>
+
+</div>
+
+);
+
 }
+
+const styles={
+
+page:{
+padding:40,
+fontFamily:"sans-serif"
+},
+
+center:{
+display:"flex",
+flexDirection:"column",
+gap:10,
+width:300,
+margin:"100px auto"
+},
+
+grid:{
+display:"grid",
+gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",
+gap:20
+},
+
+card:{
+border:"1px solid #ddd",
+padding:10
+}
+
+};
